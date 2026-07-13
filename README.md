@@ -47,6 +47,14 @@ docker compose up -d --build
 - UDP queries are exposed on port `8053/udp` (internal port `5353`).
 - DoH HTTP queries are exposed on port `8080/tcp` (internal port `80`) at path `/dns-query`. Supports both `POST` (binary payload) and `GET` (base64url `?dns=` query string).
 
+## Docker Image (GHCR)
+
+Pre-built multi-arch container images are automatically published to GitHub Container Registry:
+
+```bash
+docker pull ghcr.io/aaronburt/dyn:latest
+```
+
 ## Development
 
 ```bash
