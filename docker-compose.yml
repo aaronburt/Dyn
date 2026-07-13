@@ -4,6 +4,7 @@ services:
     container_name: dyn-dns-server-1
     ports:
       - "8053:5353/udp"
+      - "8080:80/tcp"
     volumes:
       - ./config.json:/app/config.json:ro
     restart: unless-stopped

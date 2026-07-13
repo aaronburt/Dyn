@@ -1,6 +1,7 @@
 {
   "upstreamDoH": "https://cloudflare-dns.com/dns-query",
   "enableUpstream": true,
+  "inboundProtocol": "both",
   "records": [
     {
       "pattern": "{1-254}.vm.test",

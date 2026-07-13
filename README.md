@@ -13,6 +13,7 @@ Simple dynamic DNS server in TypeScript running on Node.js/Docker with fallback 
 {
   "upstreamDoH": "https://cloudflare-dns.com/dns-query",
   "enableUpstream": true,
+  "inboundProtocol": "both",
   "records": [
     {
       "pattern": "{1-254}.vm.test",
@@ -22,13 +23,16 @@ Simple dynamic DNS server in TypeScript running on Node.js/Docker with fallback 
 }
 ```
 
+- `inboundProtocol`: Set to `"udp"`, `"doh"`, or `"both"` (default: `"both"`).
+
 ## Running
 
 ```bash
 docker compose up -d --build
 ```
 
-Queries are exposed on port `8053/udp`.
+- UDP queries are exposed on port `8053/udp` (internal port `5353`).
+- DoH HTTP queries are exposed on port `8080/tcp` (internal port `80`) at path `/dns-query`. Supports both `POST` (binary payload) and `GET` (base64url `?dns=` query string).
 
 ## Development
 

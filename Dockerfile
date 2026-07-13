@@ -14,6 +14,8 @@ COPY --from=builder /app/dist ./dist
 USER node
 
 ENV PORT=5353
+ENV DOH_PORT=80
 EXPOSE 5353/udp
+EXPOSE 80/tcp
 
 CMD ["node", "dist/index.js"]
