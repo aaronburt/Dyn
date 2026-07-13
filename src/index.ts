@@ -30,9 +30,21 @@ const parsedRecords = config.records.map(record => {
     regex: new RegExp(`^${regexStr}$`, 'i'),
     min,
     max,
-    rangeStr: rangeMatch ? rangeMatch[0] : ''
   };
 });
+
+export function resolveQuery(questionName: string): string | null {
+  for (const record of parsedRecords) {
+    const match = questionName.match(record.regex);
+    if (match) {
+      const val = parseInt(match[1], 10);
+      if (val >= record.min && val <= record.max) {
+        return record.ip.replace(record.rangeStr, val.toString());
+      }
+    }
+  }
+  return null;
+}
 
 const server = dgram.createSocket('udp4');
 
@@ -42,33 +54,23 @@ server.on('message', (msg: Buffer, rinfo: dgram.RemoteInfo) => {
     if (!packet.questions || packet.questions.length === 0) return;
 
     const question = packet.questions[0];
-    if (question.type !== 'A') return;
-
-    for (const record of parsedRecords) {
-      const match = question.name.match(record.regex);
-      if (match) {
-        const val = parseInt(match[1], 10);
-        if (val >= record.min && val <= record.max) {
-          const ip = record.ip.replace(record.rangeStr, val.toString());
-          
-          const response = dnsPacket.encode({
-            type: 'response',
-            id: packet.id,
-            flags: dnsPacket.AUTHORITATIVE_ANSWER,
-            questions: packet.questions,
-            answers: [{
-              type: 'A',
-              class: 'IN',
-              name: question.name,
-              ttl: 60,
-              data: ip
-            }]
-          });
-          
-          server.send(response, 0, response.length, rinfo.port, rinfo.address);
-          return;
-        }
-      }
+    const ip = resolveQuery(question.name);
+    if (ip) {
+      const response = dnsPacket.encode({
+        type: 'response',
+        id: packet.id,
+        flags: dnsPacket.AUTHORITATIVE_ANSWER,
+        questions: packet.questions,
+        answers: [{
+          type: 'A',
+          class: 'IN',
+          name: question.name,
+          ttl: 60,
+          data: ip
+        }]
+      });
+      
+      server.send(response, 0, response.length, rinfo.port, rinfo.address);
     }
   } catch (err) {
   }
