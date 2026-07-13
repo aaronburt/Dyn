@@ -16,7 +16,6 @@ const ConfigSchema = z.object({
 const configRaw: unknown = JSON.parse(fs.readFileSync(CONFIG_PATH, 'utf8'));
 const config = ConfigSchema.parse(configRaw);
 
-// ponytail: single range support. Upgrade path: extract logic to support multiple "{...}" ranges
 const parsedRecords = config.records.map(record => {
   const rangeMatch = record.pattern.match(/\{(\d+)-(\d+)\}/);
   const min = rangeMatch ? parseInt(rangeMatch[1], 10) : 0;
@@ -72,7 +71,6 @@ server.on('message', (msg: Buffer, rinfo: dgram.RemoteInfo) => {
       }
     }
   } catch (err) {
-    // ignore malformed packets
   }
 });
 
