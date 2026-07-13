@@ -4,8 +4,6 @@ import fs from 'fs';
 import dnsPacket from 'dns-packet';
 import { z } from 'zod';
 
-const PORT = parseInt(process.env.PORT || '5353', 10);
-const DOH_PORT = parseInt(process.env.DOH_PORT || '80', 10);
 const CONFIG_PATH = './config.json';
 
 const ConfigSchema = z.object({
@@ -15,11 +13,43 @@ const ConfigSchema = z.object({
   records: z.array(z.object({
     pattern: z.string(),
     ip: z.string()
-  }))
+  })).default([])
 });
 
-const configRaw: unknown = JSON.parse(fs.readFileSync(CONFIG_PATH, 'utf8'));
-const config = ConfigSchema.parse(configRaw);
+let fileConfig: Record<string, unknown> = {};
+if (fs.existsSync(CONFIG_PATH)) {
+  try {
+    fileConfig = JSON.parse(fs.readFileSync(CONFIG_PATH, 'utf8'));
+  } catch (err) {
+    console.error('Failed to parse config.json:', err);
+  }
+}
+
+let recordsFromEnv: unknown = undefined;
+if (process.env.RECORDS_JSON) {
+  try {
+    recordsFromEnv = JSON.parse(process.env.RECORDS_JSON);
+  } catch (err) {
+    console.error('Failed to parse RECORDS_JSON environment variable:', err);
+  }
+}
+
+const configInput = {
+  upstreamDoH: process.env.UPSTREAM_DOH || fileConfig.upstreamDoH,
+  enableUpstream: process.env.ENABLE_UPSTREAM !== undefined
+    ? process.env.ENABLE_UPSTREAM === 'true'
+    : fileConfig.enableUpstream,
+  inboundProtocol: process.env.INBOUND_PROTOCOL || fileConfig.inboundProtocol,
+  records: recordsFromEnv || fileConfig.records
+};
+
+const config = ConfigSchema.parse(configInput);
+
+const isCloudRun = Boolean(process.env.K_SERVICE);
+const defaultInbound = isCloudRun ? 'doh' : config.inboundProtocol;
+
+const PORT = parseInt(process.env.PORT || '5353', 10);
+const DOH_PORT = parseInt(process.env.DOH_PORT || (isCloudRun || defaultInbound === 'doh' ? process.env.PORT || '8080' : '80'), 10);
 
 const parsedRecords = config.records.map(record => {
   const rangeMatch = record.pattern.match(/\{(\d+)-(\d+)\}/);
@@ -190,10 +220,10 @@ export function startDoHServer(port: number) {
 }
 
 if (process.env.NODE_ENV !== 'test') {
-  if (config.inboundProtocol === 'udp' || config.inboundProtocol === 'both') {
+  if (defaultInbound === 'udp' || defaultInbound === 'both') {
     startUDPServer(PORT);
   }
-  if (config.inboundProtocol === 'doh' || config.inboundProtocol === 'both') {
+  if (defaultInbound === 'doh' || defaultInbound === 'both') {
     startDoHServer(DOH_PORT);
   }
 }

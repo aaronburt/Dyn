@@ -25,6 +25,19 @@ Simple dynamic DNS server in TypeScript running on Node.js/Docker with fallback 
 
 - `inboundProtocol`: Set to `"udp"`, `"doh"`, or `"both"` (default: `"both"`).
 
+## Environment Variables (Cloud Run / Container Config)
+
+All parameters can be configured via environment variables (useful for Google Cloud Run or Docker deployments without mounting `config.json`):
+
+| Variable | Description | Default |
+| --- | --- | --- |
+| `INBOUND_PROTOCOL` | Inbound server mode (`udp`, `doh`, or `both`) | `both` (or `doh` in Cloud Run) |
+| `UPSTREAM_DOH` | Upstream DoH fallback URL | `https://cloudflare-dns.com/dns-query` |
+| `ENABLE_UPSTREAM` | Enable upstream fallback (`true` or `false`) | `true` |
+| `RECORDS_JSON` | Array of records as a JSON string | `[]` |
+| `PORT` | Listening port for UDP DNS server | `5353` |
+| `DOH_PORT` | Listening port for DoH HTTP server | `80` (or `PORT` in Cloud Run) |
+
 ## Running
 
 ```bash
