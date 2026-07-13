@@ -8,6 +8,7 @@ const CONFIG_PATH = './config.json';
 
 const ConfigSchema = z.object({
   upstreamDoH: z.string().default('https://cloudflare-dns.com/dns-query'),
+  enableUpstream: z.boolean().default(true),
   records: z.array(z.object({
     pattern: z.string(),
     ip: z.string()
@@ -96,7 +97,7 @@ server.on('message', async (msg: Buffer, rinfo: dgram.RemoteInfo) => {
       });
       
       server.send(response, 0, response.length, rinfo.port, rinfo.address);
-    } else {
+    } else if (config.enableUpstream) {
       const responseBuf = await resolveUpstream(msg, config.upstreamDoH);
       server.send(responseBuf, 0, responseBuf.length, rinfo.port, rinfo.address);
     }
