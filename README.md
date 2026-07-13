@@ -16,7 +16,7 @@ Simple dynamic DNS server in TypeScript running on Node.js/Docker with fallback 
   "records": [
     {
       "pattern": "{1-254}.vm.test",
-      "ip": "192.168.100.{1-254}"
+      "ip": "192.168.100.$1"
     }
   ]
 }

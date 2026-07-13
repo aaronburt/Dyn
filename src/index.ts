@@ -32,7 +32,6 @@ const parsedRecords = config.records.map(record => {
     regex: new RegExp(`^${regexStr}$`, 'i'),
     min,
     max,
-    rangeStr: rangeMatch ? rangeMatch[0] : '',
   };
 });
 
@@ -42,7 +41,7 @@ export function resolveQuery(questionName: string): string | null {
     if (match) {
       const val = parseInt(match[1], 10);
       if (val >= record.min && val <= record.max) {
-        return record.ip.replace(record.rangeStr, val.toString());
+        return record.ip.replace('$1', val.toString());
       }
     }
   }
@@ -102,7 +101,14 @@ server.on('message', async (msg: Buffer, rinfo: dgram.RemoteInfo) => {
       server.send(responseBuf, 0, responseBuf.length, rinfo.port, rinfo.address);
     }
   } catch (err) {
+    console.error('Error handling query:', err);
   }
 });
 
-server.bind(PORT);
+server.on('listening', () => {
+  console.log(`DNS server listening on UDP port ${PORT}...`);
+});
+
+if (process.env.NODE_ENV !== 'test') {
+  server.bind(PORT);
+}

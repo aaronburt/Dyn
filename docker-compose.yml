@@ -1,8 +1,9 @@
-version: '3.8'
-
 services:
-  dns-server:
+  dns:
     build: .
+    container_name: dyn-dns-server-1
     ports:
-      - "8053:53/udp"
+      - "8053:5353/udp"
+    volumes:
+      - ./config.json:/app/config.json:ro
     restart: unless-stopped
