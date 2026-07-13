@@ -1,4 +1,5 @@
 {
+  "upstreamDoH": "https://cloudflare-dns.com/dns-query",
   "records": [
     {
       "pattern": "{1-254}.vm.test",

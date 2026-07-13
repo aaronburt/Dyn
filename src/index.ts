@@ -7,6 +7,7 @@ const PORT = parseInt(process.env.PORT || '5353', 10);
 const CONFIG_PATH = './config.json';
 
 const ConfigSchema = z.object({
+  upstreamDoH: z.string().default('https://cloudflare-dns.com/dns-query'),
   records: z.array(z.object({
     pattern: z.string(),
     ip: z.string()
@@ -30,6 +31,7 @@ const parsedRecords = config.records.map(record => {
     regex: new RegExp(`^${regexStr}$`, 'i'),
     min,
     max,
+    rangeStr: rangeMatch ? rangeMatch[0] : '',
   };
 });
 
@@ -46,15 +48,38 @@ export function resolveQuery(questionName: string): string | null {
   return null;
 }
 
+async function resolveUpstream(msg: Buffer, url: string): Promise<Buffer> {
+  const controller = new AbortController();
+  const timeoutId = setTimeout(() => controller.abort(), 5000);
+  
+  try {
+    const res = await fetch(url, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/dns-message',
+        'Accept': 'application/dns-message'
+      },
+      body: new Uint8Array(msg),
+      signal: controller.signal
+    });
+    
+    if (!res.ok) throw new Error(`Upstream error: ${res.status}`);
+    return Buffer.from(await res.arrayBuffer());
+  } finally {
+    clearTimeout(timeoutId);
+  }
+}
+
 const server = dgram.createSocket('udp4');
 
-server.on('message', (msg: Buffer, rinfo: dgram.RemoteInfo) => {
+server.on('message', async (msg: Buffer, rinfo: dgram.RemoteInfo) => {
   try {
     const packet = dnsPacket.decode(msg);
     if (!packet.questions || packet.questions.length === 0) return;
 
     const question = packet.questions[0];
     const ip = resolveQuery(question.name);
+    
     if (ip) {
       const response = dnsPacket.encode({
         type: 'response',
@@ -71,6 +96,9 @@ server.on('message', (msg: Buffer, rinfo: dgram.RemoteInfo) => {
       });
       
       server.send(response, 0, response.length, rinfo.port, rinfo.address);
+    } else {
+      const responseBuf = await resolveUpstream(msg, config.upstreamDoH);
+      server.send(responseBuf, 0, responseBuf.length, rinfo.port, rinfo.address);
     }
   } catch (err) {
   }
